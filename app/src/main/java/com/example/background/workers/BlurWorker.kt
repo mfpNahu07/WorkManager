@@ -21,6 +21,9 @@ class BlurWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
 
         makeStatusNotification("Blurring image", appContext)
 
+        // ADD THIS TO SLOW DOWN THE WORKER
+        sleep()
+
         return try {
             // REMOVE THIS
             //    val picture = BitmapFactory.decodeResource(
@@ -45,8 +48,8 @@ class BlurWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
             val outputData = workDataOf(KEY_IMAGE_URI to outputUri.toString())
 
             Result.success(outputData)
+            //Result.success()
 
-            Result.success()
         } catch (throwable: Throwable) {
             Log.e(TAG, "Error applying blur")
             throwable.printStackTrace()
@@ -56,3 +59,18 @@ class BlurWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
 
 
 }
+
+
+/**
+ *
+ * Es hora de agregar la capacidad de desenfocar una imagen varias veces.
+ * Toma el parámetro blurLevel que pasaste a applyBlur y agrega esa cantidad de operaciones
+ * WorkRequest de desenfoque a la cadena. Solo la primera WorkRequest necesitará contar con la entrada de URI.
+ *
+ * Ten en cuenta que mostramos algo un poco forzado con fines de aprendizaje. Llamar a nuestro
+ * código de desenfoque tres veces es menos eficiente que permitir que BlurWorker tome una entrada
+ * que controle el "grado" de desenfoque. Sin embargo, esto nos permite mostrar la flexibilidad de
+ * las cadenas de WorkManager.
+ *
+ *
+ * */

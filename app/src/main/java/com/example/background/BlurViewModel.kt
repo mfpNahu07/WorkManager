@@ -27,6 +27,8 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.background.workers.BlurWorker
+import com.example.background.workers.CleanupWorker
+import com.example.background.workers.SaveImageToFileWorker
 
 
 class BlurViewModel(application: Application) : ViewModel() {
@@ -44,14 +46,40 @@ class BlurViewModel(application: Application) : ViewModel() {
      * Create the WorkRequest to apply the blur and save the resulting image
      * @param blurLevel The amount to blur the image
      */
-    internal fun applyBlur(blurLevel: Int) {
-       // workManager.enqueue(OneTimeWorkRequest.from(BlurWorker::class.java))
 
-        val blurRequest = OneTimeWorkRequestBuilder<BlurWorker>()
-            .setInputData(createInputDataForUri())
+    /*
+    * Crea una cadena de WorkRequest de CleanupWorker, WorkRequest de BlurImage y WorkRequest de
+    *  SaveImageToFile en applyBlur. Pasa la entrada a la WorkRequest de BlurImage
+    * */
+
+    internal fun applyBlur(blurLevel: Int) {
+        // Add WorkRequest to Cleanup temporary images
+        var continuation = workManager
+            .beginWith(OneTimeWorkRequest
+                .from(CleanupWorker::class.java))
+
+        // Add WorkRequests to blur the image the number of times requested
+        for (i in 0 until blurLevel) {
+            val blurBuilder = OneTimeWorkRequestBuilder<BlurWorker>()
+
+            // Input the Uri if this is the first blur operation
+            // After the first blur operation the input will be the output of previous
+            // blur operations.
+            if (i == 0) {
+                blurBuilder.setInputData(createInputDataForUri())
+            }
+
+            continuation = continuation.then(blurBuilder.build())
+        }
+
+        // Add WorkRequest to save the image to the filesystem
+        val save = OneTimeWorkRequestBuilder<SaveImageToFileWorker>()
             .build()
 
-        workManager.enqueue(blurRequest)
+        continuation = continuation.then(save)
+
+        // Actually start the work
+        continuation.enqueue()
     }
 
     private fun uriOrNull(uriString: String?): Uri? {
@@ -102,3 +130,16 @@ class BlurViewModel(application: Application) : ViewModel() {
         }
     }
 }
+
+/**
+ * En lugar de llamar a workManager.enqueue(), llama a workManager.beginWith().
+ * Esto mostrará un WorkContinuation, que define una cadena de WorkRequest.
+ * Puedes agregar a esta cadena de solicitudes de trabajo llamando al método then(), por ejemplo,
+ * si tienes tres objetos WorkRequest, workA, workB y workC, podrás hacer lo siguiente:
+ *
+ * val continuation = workManager.beginWith(workA)
+ * continuation.then(workB) // FYI, then() returns a new WorkContinuation instance
+ * .then(workC)
+ * .enqueue() // Enqueues the WorkContinuation which is a chain of work
+ *
+ * */
