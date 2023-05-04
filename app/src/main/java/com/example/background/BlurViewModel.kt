@@ -90,8 +90,14 @@ class BlurViewModel(application: Application) : ViewModel() {
             continuation = continuation.then(blurBuilder.build())
         }
 
+        // Create charging constraint
+        val constraints = Constraints.Builder()
+            .setRequiresCharging(true)
+            .build()
+
         // Add WorkRequest to save the image to the filesystem
         val save = OneTimeWorkRequestBuilder<SaveImageToFileWorker>()
+            .setConstraints(constraints)
             .addTag(TAG_OUTPUT) //   Tag your work
             .build()
 
@@ -226,3 +232,5 @@ getWorkInfosByTagLiveData
 
 Finally, you can optionally tag any WorkRequest with a String. You can tag multiple WorkRequests with the same tag to associate them. This returns the LiveData<List<WorkInfos>> for any single tag.
  */
+
+//Last but not least, WorkManager supports Constraints. For Blur-O-Matic, you'll use the constraint that the device must be charging. This means that your work request will only run if the device is charging.
