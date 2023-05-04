@@ -22,10 +22,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.work.Data
-import androidx.work.OneTimeWorkRequest
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
+import androidx.work.*
 import com.example.background.workers.BlurWorker
 import com.example.background.workers.CleanupWorker
 import com.example.background.workers.SaveImageToFileWorker
@@ -53,10 +50,21 @@ class BlurViewModel(application: Application) : ViewModel() {
     * */
 
     internal fun applyBlur(blurLevel: Int) {
+
+
+        // REPLACE THIS CODE:
         // Add WorkRequest to Cleanup temporary images
+        // var continuation = workManager
+        //            .beginWith(OneTimeWorkRequest
+        //            .from(CleanupWorker::class.java))
+
+        // WITH
         var continuation = workManager
-            .beginWith(OneTimeWorkRequest
-                .from(CleanupWorker::class.java))
+            .beginUniqueWork(
+                IMAGE_MANIPULATION_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                OneTimeWorkRequest.from(CleanupWorker::class.java)
+            )
 
         // Add WorkRequests to blur the image the number of times requested
         for (i in 0 until blurLevel) {
@@ -141,5 +149,31 @@ class BlurViewModel(application: Application) : ViewModel() {
  * continuation.then(workB) // FYI, then() returns a new WorkContinuation instance
  * .then(workC)
  * .enqueue() // Enqueues the WorkContinuation which is a chain of work
+ *
+ * */
+
+
+/**
+ * Ahora que usaste las cadenas, es hora de abordar otra poderosa función
+ * de WorkManager: las cadenas de trabajo único.   <------------------
+ *
+ * A veces, querrás que solo una cadena de trabajo se ejecute a la vez. Por ejemplo, tal vez tengas
+ * una cadena de trabajo que sincroniza tus datos locales con el servidor. Sería bueno permitir que
+ * la primera sincronización de datos termine antes de comenzar una nueva. Para hacerlo, deberás
+ *
+ * ---------------->   usar beginUniqueWork en lugar de beginWith   <--------------------
+ *
+ * y proporcionarle un nombre de String único.
+ * Esto nombrará la cadena completa de solicitudes de trabajo a fin de que puedas hacer consultas
+ * y búsquedas en todas ellas.
+ *
+ * Asegúrate de que la cadena de trabajo que desenfocará tu archivo sea única por medio de
+ * beginUniqueWork. Pasa IMAGE_MANIPULATION_WORK_NAME como la clave. También deberás pasar una
+ * ExistingWorkPolicy. Tus opciones son REPLACE, KEEP o APPEND.
+ *
+ * Deberás usar REPLACE porque, si el usuario decide desenfocar otra imagen antes de que se termine
+ * la actual, querremos detener la tarea actual y comenzar a desenfocar la imagen nueva.
+ *
+ *Blur-O-Matic ahora solo desenfocará una imagen por vez
  *
  * */
