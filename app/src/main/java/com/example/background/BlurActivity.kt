@@ -16,6 +16,7 @@
 
 package com.example.background
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.activity.viewModels
@@ -42,6 +43,16 @@ class BlurActivity : AppCompatActivity() {
 
         // Observe work status, added in onCreate()
         viewModel.outputWorkInfos.observe(this, workInfosObserver())
+
+        // Setup view output image file button
+        binding.seeFileButton.setOnClickListener {
+            viewModel.outputUri?.let { currentUri ->
+                val actionView = Intent(Intent.ACTION_VIEW, currentUri)
+                actionView.resolveActivity(packageManager)?.run {
+                    startActivity(actionView)
+                }
+            }
+        }
     }
 
     // Define the observer function
@@ -63,6 +74,16 @@ class BlurActivity : AppCompatActivity() {
 
             if (workInfo.state.isFinished) {
                 showWorkFinished()
+
+                // Normally this processing, which is not directly related to drawing views on
+                // screen would be in the ViewModel. For simplicity we are keeping it here.
+                val outputImageUri = workInfo.outputData.getString(KEY_IMAGE_URI)
+
+                // If there is an output file show "See File" button
+                if (!outputImageUri.isNullOrEmpty()) {
+                    viewModel.setOutputUri(outputImageUri)
+                    binding.seeFileButton.visibility = View.VISIBLE
+                }
             } else {
                 showWorkInProgress()
             }
@@ -101,3 +122,12 @@ class BlurActivity : AppCompatActivity() {
                 else -> 1
             }
 }
+
+
+/**
+ * Each WorkInfo also has a getOutputData method which allows you to get the output Data object
+ * with the final saved image. In Kotlin you can access this method using a variable that the
+ * language generates for you: outputData. Let's display a button that says See File whenever
+ * there's a blurred image ready to show.
+ *
+ * */
